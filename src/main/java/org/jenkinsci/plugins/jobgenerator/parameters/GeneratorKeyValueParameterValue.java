@@ -38,8 +38,6 @@ import hudson.util.VariableResolver;
  * @author <a href="mailto:sylvain.benner@gmail.com">Sylvain Benner</a>
  */
 public class GeneratorKeyValueParameterValue extends StringParameterValue {
-    @Exported(visibility = 4)
-    public final String value;
 
     @DataBoundConstructor
     public GeneratorKeyValueParameterValue(String name, String value) {
@@ -48,8 +46,7 @@ public class GeneratorKeyValueParameterValue extends StringParameterValue {
 
     public GeneratorKeyValueParameterValue(String name, String value,
             String description) {
-        super(name, description);
-        this.value = value;
+        super(name, value, description);
     }
 
     /**
