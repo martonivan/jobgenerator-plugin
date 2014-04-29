@@ -66,6 +66,7 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.xml.transform.Source;
 import javax.xml.transform.stream.StreamSource;
 
 import jenkins.model.Jenkins;
@@ -420,7 +421,7 @@ public class GeneratorRun extends Build<JobGenerator, GeneratorRun> {
                         (AbstractProject) Jenkins.getInstance().getItem(expName);
                 if(item != null){
                     StreamSource ss = new StreamSource(is);
-                    item.updateByXml(ss);
+                    item.updateByXml((Source)ss);
                     LOGGER.info(String.format("Updated configuration of " +
                                               "job %s", expName));
                 }
