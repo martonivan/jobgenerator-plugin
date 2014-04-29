@@ -80,6 +80,8 @@ import org.dom4j.Visitor;
 import org.dom4j.VisitorSupport;
 import org.dom4j.io.SAXReader;
 
+import org.jenkins_ci.plugins.flexible_publish.ConditionalPublisher;
+import org.jenkins_ci.plugins.flexible_publish.FlexiblePublisher;
 import org.jenkins_ci.plugins.run_condition.RunCondition;
 import org.jenkinsci.plugins.conditionalbuildstep.singlestep.SingleConditionalBuilder;
 import org.jenkinsci.plugins.jobgenerator.actions.*;
@@ -472,36 +474,6 @@ public class GeneratorRun extends Build<JobGenerator, GeneratorRun> {
                     new ArrayList<AbstractProject>();
             List<ParametersAction> lpa = getBuild().getActions(
                                           hudson.model.ParametersAction.class);
-            // parameterized build trigger build trigger
-            BuildTrigger bt = job.getPublishersList().get(BuildTrigger.class);
-            if (bt != null) {
-                for (ListIterator<BuildTriggerConfig> btc =
-                        bt.getConfigs().listIterator(); btc.hasNext();) {
-                    BuildTriggerConfig c = btc.next();
-                    for (AbstractProject p : c.getProjectList(job.getParent(),
-                                                              null)) {
-                        List<List<ParametersAction>> importParams =
-                                       new ArrayList<List<ParametersAction>>();
-                        importParams.add(new ArrayList<ParametersAction>());
-                        importParams.get(0).addAll(lpa);
-                        List<AbstractBuildParameters> lbp = c.getConfigs();
-                        for(AbstractBuildParameters bp: lbp){
-                            if(bp.getClass().getSimpleName().equals(
-                                            "PredefinedGeneratorParameters")){
-                                importParams.get(0).add((ParametersAction)
-                                    bp.getAction(GeneratorRun.this, listener));
-                            }
-                        }
-                        if (JobGenerator.class.isInstance(p)){
-                            job.copyOptions((JobGenerator) p);
-                            downstreamGenerators.add(
-                                     new DownstreamGenerator(p, importParams));
-                            processedProjects.add(p);
-                        }
-                    }
-                }
-            }
-
             // parameterized build trigger build step
             List<TriggerBuilder> tbl = job.getBuildersList().getAll(
                                                          TriggerBuilder.class);
@@ -519,6 +491,24 @@ public class GeneratorRun extends Build<JobGenerator, GeneratorRun> {
             }
             this.gatherDownstreamGeneratorsFromTriggerBuilder(tbl, lpa,
                                                               listener);
+            // parameterized build trigger build trigger
+            BuildTrigger bt = job.getPublishersList().get(BuildTrigger.class);
+            this.gatherDownstreamGeneratorsFromBuildTrigger(
+                    bt, lpa, processedProjects, listener);
+            // parameterized build trigger dug into a flexible publisher
+            FlexiblePublisher fb = job.getPublishersList().get(
+                                                      FlexiblePublisher.class);
+            if (fb != null) {
+                for (ListIterator<ConditionalPublisher> cps =
+                        fb.getPublishers().listIterator(); cps.hasNext();) {
+                    ConditionalPublisher cp = cps.next();
+                    BuildStep bs = cp.getPublisher();
+                    if(BuildTrigger.class.isInstance(bs)){
+                        this.gatherDownstreamGeneratorsFromBuildTrigger(
+                                bt, lpa, processedProjects, listener);
+                    }
+                }
+            }
 
             // standard Jenkins dependencies
             for(AbstractProject dp: job.getDownstreamProjects()){
@@ -531,6 +521,41 @@ public class GeneratorRun extends Build<JobGenerator, GeneratorRun> {
                         importParams.get(0).addAll(lpa);
                         downstreamGenerators.add(
                                     new DownstreamGenerator(dp, importParams));
+                    }
+                }
+            }
+        }
+
+        private void gatherDownstreamGeneratorsFromBuildTrigger(
+                BuildTrigger bt,
+                List<ParametersAction> params,
+                List<AbstractProject> processedProjects,
+                BuildListener listener) throws Exception {
+            JobGenerator job = getJobGenerator();
+            if (bt != null) {
+                for (ListIterator<BuildTriggerConfig> btc =
+                        bt.getConfigs().listIterator(); btc.hasNext();) {
+                    BuildTriggerConfig c = btc.next();
+                    for (AbstractProject p : c.getProjectList(job.getParent(),
+                                                              null)) {
+                        List<List<ParametersAction>> importParams =
+                                       new ArrayList<List<ParametersAction>>();
+                        importParams.add(new ArrayList<ParametersAction>());
+                        importParams.get(0).addAll(params);
+                        List<AbstractBuildParameters> lbp = c.getConfigs();
+                        for(AbstractBuildParameters bp: lbp){
+                            if(bp.getClass().getSimpleName().equals(
+                                            "PredefinedGeneratorParameters")){
+                                importParams.get(0).add((ParametersAction)
+                                    bp.getAction(GeneratorRun.this, listener));
+                            }
+                        }
+                        if (JobGenerator.class.isInstance(p)){
+                            job.copyOptions((JobGenerator) p);
+                            downstreamGenerators.add(
+                                     new DownstreamGenerator(p, importParams));
+                            processedProjects.add(p);
+                        }
                     }
                 }
             }
