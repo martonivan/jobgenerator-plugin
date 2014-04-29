@@ -495,7 +495,7 @@ public class GeneratorRun extends Build<JobGenerator, GeneratorRun> {
                         if (JobGenerator.class.isInstance(p)){
                             job.copyOptions((JobGenerator) p);
                             downstreamGenerators.add(
-                                         new DownstreamGenerator(p, importParams));
+                                     new DownstreamGenerator(p, importParams));
                             processedProjects.add(p);
                         }
                     }
@@ -507,7 +507,7 @@ public class GeneratorRun extends Build<JobGenerator, GeneratorRun> {
                                                          TriggerBuilder.class);
             this.gatherDownstreamGeneratorsFromTriggerBuilder(
                     tbl, lpa, listener);
-            // parameterized build trigger step digged into a conditional step
+            // parameterized build trigger step dug into a conditional step
             List<SingleConditionalBuilder> scbl = job.getBuildersList().getAll(
                                                SingleConditionalBuilder.class);
             tbl.clear();
@@ -530,7 +530,7 @@ public class GeneratorRun extends Build<JobGenerator, GeneratorRun> {
                         importParams.add(new ArrayList<ParametersAction>());
                         importParams.get(0).addAll(lpa);
                         downstreamGenerators.add(
-                                        new DownstreamGenerator(dp, importParams));
+                                    new DownstreamGenerator(dp, importParams));
                     }
                 }
             }
