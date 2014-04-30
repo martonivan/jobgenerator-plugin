@@ -479,69 +479,49 @@ public class GeneratorRun extends Build<JobGenerator, GeneratorRun> {
                 Document doc) throws Exception {
             List<ParametersAction> lpa = getBuild().getActions(
                                           hudson.model.ParametersAction.class);
+            Element nodebuilders = (Element) doc.selectSingleNode(
+                                                          "/project/builders");
+            List<String> rootNames = new ArrayList<String>();
             // param build trigger with single cond.
-            List nodes = doc.selectNodes("//org.jenkinsci.plugins." +
+            rootNames.add("org.jenkinsci.plugins." +
                    "conditionalbuildstep.singlestep.SingleConditionalBuilder");
-            for (Iterator i = nodes.iterator(); i.hasNext();) {
-                Element node = (Element) i.next();
-                InputStream is = new ByteArrayInputStream(
-                                               node.asXML().getBytes("UTF-8"));
-                XStream2 xs = new XStream2();
-                SingleConditionalBuilder scb = 
-                        (SingleConditionalBuilder) xs.fromXML(is);
-                BuildStep bs = scb.getBuildStep();
-                if(TriggerBuilder.class.isInstance(bs)){
-                    this.gatherDownstreamGeneratorsFromTriggerBuilder(
-                                     (TriggerBuilder) bs, lpa, node, listener);
-                }
-            }
             // param build trigger with multiple step cond.
-            nodes = doc.selectNodes("//org.jenkinsci.plugins." +
+            rootNames.add("org.jenkinsci.plugins." +
                                     "conditionalbuildstep.ConditionalBuilder");
-            for (Iterator i = nodes.iterator(); i.hasNext();) {
-                Element node = (Element) i.next();
-                InputStream is = new ByteArrayInputStream(
-                                               node.asXML().getBytes("UTF-8"));
-                XStream2 xs = new XStream2();
-                ConditionalBuilder cb = (ConditionalBuilder) xs.fromXML(is);
-                List<BuildStep> bsl = cb.getConditionalbuilders();
-                for(BuildStep bs: bsl){
-                    if(TriggerBuilder.class.isInstance(bs)){
-                        this.gatherDownstreamGeneratorsFromTriggerBuilder(
-                                     (TriggerBuilder) bs, lpa, node, listener);
-                    }
-                }
-            }
             // param build trigger without cond.
-            nodes = doc.selectNodes("//hudson.plugins." +
-                                    "parameterizedtrigger.TriggerBuilder");
-            for (Iterator i = nodes.iterator(); i.hasNext();) {
-                Element node = (Element) i.next();
-                InputStream is = new ByteArrayInputStream(
-                                               node.asXML().getBytes("UTF-8"));
-                XStream2 xs = new XStream2();
-                TriggerBuilder tb = (TriggerBuilder) xs.fromXML(is);
-                this.gatherDownstreamGeneratorsFromTriggerBuilder(
-                                                      tb, lpa, node, listener);
+            rootNames.add("hudson.plugins." +
+                                        "parameterizedtrigger.TriggerBuilder");
+            for(String rootName: rootNames){
+                List roots = nodebuilders.elements(rootName);
+                for (Iterator i = roots.iterator(); i.hasNext();) {
+                    Element root = (Element) i.next();
+                    this.gatherDownstreamGeneratorsFromTriggerBuilder(
+                                                          root, lpa, listener);
+                }
             }
         }
 
         private void gatherDownstreamGeneratorsFromTriggerBuilder(
-                TriggerBuilder tb,
+                Element root,
                 List<ParametersAction> params,
-                Element node,
                 BuildListener listener) throws Exception {
             JobGenerator job = getJobGenerator();
-            for (ListIterator<BlockableBuildTriggerConfig> tbc =
-                    tb.getConfigs().listIterator(); tbc.hasNext();) {
-                BuildTriggerConfig c = tbc.next();
-                for (AbstractProject p : c.getProjectList(
-                                             job.getParent(),null)) {
+            List nodes = root.selectNodes("configs/hudson.plugins." +
+                           "parameterizedtrigger.BlockableBuildTriggerConfig");
+            for (Iterator i = nodes.iterator(); i.hasNext();){
+                Element node = (Element) i.next();
+                InputStream is =
+                  new ByteArrayInputStream(node.asXML().getBytes("UTF-8"));
+                XStream2 xs = new XStream2();
+                BlockableBuildTriggerConfig btc =
+                                  (BlockableBuildTriggerConfig) xs.fromXML(is);
+                for (AbstractProject p : btc.getProjectList(job.getParent(),
+                                                                       null)) {
                     List<List<ParametersAction>> importParams =
                                    new ArrayList<List<ParametersAction>>();
                     importParams.add(new ArrayList<ParametersAction>());
                     importParams.get(0).addAll(params);
-                    List<AbstractBuildParameters> lbp = c.getConfigs();
+                    List<AbstractBuildParameters> lbp = btc.getConfigs();
                     for(AbstractBuildParameters bp: lbp){
                         if(bp.getClass().getSimpleName().equals(
                                     "PredefinedGeneratorParameters")){
@@ -582,41 +562,27 @@ public class GeneratorRun extends Build<JobGenerator, GeneratorRun> {
                 Document doc) throws Exception{
             List<ParametersAction> lpa = getBuild().getActions(
                                           hudson.model.ParametersAction.class);
+            Element nodepublishers = (Element) doc.selectSingleNode(
+                                                        "/project/publishers");
+            List<String> rootNames = new ArrayList<String>();
             // param build triggers in flexible pub.
-            Element node = (Element) doc.selectSingleNode(
-                                    "//org.jenkins__ci.plugins." +
-                                    "flexible__publish.FlexiblePublisher");
-            if(node != null) {
-                InputStream is = new ByteArrayInputStream(
-                                               node.asXML().getBytes("UTF-8"));
-                XStream2 xs = new XStream2();
-                FlexiblePublisher fb = (FlexiblePublisher) xs.fromXML(is);
-                for (ListIterator<ConditionalPublisher> cps =
-                        fb.getPublishers().listIterator(); cps.hasNext();) {
-                    ConditionalPublisher cp = cps.next();
-                    BuildStep bs = cp.getPublisher();
-                    if(BuildTrigger.class.isInstance(bs)){
-                        this.gatherDownstreamGeneratorsFromBuildTrigger(
-                                       (BuildTrigger) bs, lpa, node, listener);
-                    }
+            rootNames.add("org.jenkins__ci.plugins." +
+                          "flexible__publish.FlexiblePublisher");
+            // param build trigger no cond.
+            rootNames.add("hudson.plugins.parameterizedtrigger.BuildTrigger");
+            for(String rootName: rootNames){
+                List roots = nodepublishers.elements(rootName);
+                for (Iterator i = roots.iterator(); i.hasNext();) {
+                    Element root = (Element) i.next();
+                    this.gatherDownstreamGeneratorsFromBuildTrigger(
+                                                          root, lpa, listener);
                 }
             }
-            // param build trigger no cond.
-            List nodes = doc.selectNodes("//hudson.plugins." +
-                                         "parameterizedtrigger.BuildTrigger");
-            for (Iterator i = nodes.iterator(); i.hasNext();) {
-                node = (Element) i.next();
-                InputStream is =
-                      new ByteArrayInputStream(node.asXML().getBytes("UTF-8"));
-                XStream2 xs = new XStream2();
-                BuildTrigger bt = (BuildTrigger) xs.fromXML(is);
-                this.gatherDownstreamGeneratorsFromBuildTrigger(
-                                                      bt, lpa, node, listener);
-            }
             // legacy build triggers
-            nodes = doc.selectNodes("//hudson.tasks.BuildTrigger");
+            List nodes = nodepublishers.selectNodes(
+                                                  "hudson.tasks.BuildTrigger");
             for (Iterator i = nodes.iterator(); i.hasNext();) {
-                node = (Element) i.next();
+                Element node = (Element) i.next();
                 InputStream is =
                       new ByteArrayInputStream(node.asXML().getBytes("UTF-8"));
                 XStream2 xs = new XStream2();
@@ -628,34 +594,36 @@ public class GeneratorRun extends Build<JobGenerator, GeneratorRun> {
         }
 
         private void gatherDownstreamGeneratorsFromBuildTrigger(
-                BuildTrigger bt,
+                Element root,
                 List<ParametersAction> params,
-                Element node,
                 BuildListener listener) throws Exception {
             JobGenerator job = getJobGenerator();
-            if (bt != null) {
-                for (ListIterator<BuildTriggerConfig> btc =
-                        bt.getConfigs().listIterator(); btc.hasNext();) {
-                    BuildTriggerConfig c = btc.next();
-                    for (AbstractProject p : c.getProjectList(job.getParent(),
-                                                              null)) {
-                        List<List<ParametersAction>> importParams =
-                                       new ArrayList<List<ParametersAction>>();
-                        importParams.add(new ArrayList<ParametersAction>());
-                        importParams.get(0).addAll(params);
-                        List<AbstractBuildParameters> lbp = c.getConfigs();
-                        for(AbstractBuildParameters bp: lbp){
-                            if(bp.getClass().getSimpleName().equals(
-                                            "PredefinedGeneratorParameters")){
-                                importParams.get(0).add((ParametersAction)
-                                    bp.getAction(GeneratorRun.this, listener));
-                            }
+            List nodes = root.selectNodes("configs/hudson.plugins." +
+                                "parameterizedtrigger.BuildTriggerConfig");
+            for (Iterator i = nodes.iterator(); i.hasNext();){
+                Element node = (Element) i.next();
+                InputStream is =
+                  new ByteArrayInputStream(node.asXML().getBytes("UTF-8"));
+                XStream2 xs = new XStream2();
+                BuildTriggerConfig btc = (BuildTriggerConfig) xs.fromXML(is);
+                for (AbstractProject p : btc.getProjectList(job.getParent(),
+                                                                       null)) {
+                    List<List<ParametersAction>> importParams =
+                                   new ArrayList<List<ParametersAction>>();
+                    importParams.add(new ArrayList<ParametersAction>());
+                    importParams.get(0).addAll(params);
+                    List<AbstractBuildParameters> lbp = btc.getConfigs();
+                    for(AbstractBuildParameters bp: lbp){
+                        if(bp.getClass().getSimpleName().equals(
+                                        "PredefinedGeneratorParameters")){
+                            importParams.get(0).add((ParametersAction)
+                                bp.getAction(GeneratorRun.this, listener));
                         }
-                        if (JobGenerator.class.isInstance(p)){
-                            job.copyOptions((JobGenerator) p);
-                            downstreamGenerators.add(
-                               new DownstreamGenerator(p, importParams, node));
-                        }
+                    }
+                    if (JobGenerator.class.isInstance(p)){
+                        job.copyOptions((JobGenerator) p);
+                        downstreamGenerators.add(
+                           new DownstreamGenerator(p, importParams, node));
                     }
                 }
             }
