@@ -932,9 +932,11 @@ public class GeneratorRun extends Build<JobGenerator, GeneratorRun> {
         @Override
         public void visit(Element node) {
             String n = node.getName();
-            if (n.equals("condition") && node.attribute("plugin") != null &&
-                GeneratorRun.isEvaluationSupported(node) &&
-                GeneratorRun.allParametersAreResolved(node)){
+            boolean resolvableCond = GeneratorRun.isEvaluationSupported(node);
+            if (n.equals("condition") &&
+                node.attribute("plugin") != null &&
+                ((resolvableCond && GeneratorRun.allParametersAreResolved(node))
+                 || !resolvableCond)){
                 // convert this chunk of xml config to a file
                 InputStream is;
                 try {
