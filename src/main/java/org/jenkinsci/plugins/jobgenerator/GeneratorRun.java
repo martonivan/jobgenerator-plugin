@@ -506,7 +506,7 @@ public class GeneratorRun extends Build<JobGenerator, GeneratorRun> {
                 List<ParametersAction> params,
                 BuildListener listener) throws Exception {
             JobGenerator job = getJobGenerator();
-            List nodes = root.selectNodes("configs/hudson.plugins." +
+            List nodes = root.selectNodes("//configs/hudson.plugins." +
                            "parameterizedtrigger.BlockableBuildTriggerConfig");
             for (Iterator i = nodes.iterator(); i.hasNext();){
                 Element node = (Element) i.next();
@@ -598,7 +598,7 @@ public class GeneratorRun extends Build<JobGenerator, GeneratorRun> {
                 List<ParametersAction> params,
                 BuildListener listener) throws Exception {
             JobGenerator job = getJobGenerator();
-            List nodes = root.selectNodes("configs/hudson.plugins." +
+            List nodes = root.selectNodes("//configs/hudson.plugins." +
                                 "parameterizedtrigger.BuildTriggerConfig");
             for (Iterator i = nodes.iterator(); i.hasNext();){
                 Element node = (Element) i.next();
@@ -932,11 +932,9 @@ public class GeneratorRun extends Build<JobGenerator, GeneratorRun> {
         @Override
         public void visit(Element node) {
             String n = node.getName();
-            boolean resolvableCond = GeneratorRun.isEvaluationSupported(node);
-            if (n.equals("condition") &&
-                node.attribute("plugin") != null &&
-                ((resolvableCond && GeneratorRun.allParametersAreResolved(node))
-                 || !resolvableCond)){
+            if (n.equals("condition") && node.attribute("plugin") != null &&
+                GeneratorRun.isEvaluationSupported(node) &&
+                GeneratorRun.allParametersAreResolved(node)){
                 // convert this chunk of xml config to a file
                 InputStream is;
                 try {
