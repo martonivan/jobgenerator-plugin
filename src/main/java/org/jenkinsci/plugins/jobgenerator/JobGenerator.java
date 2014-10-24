@@ -197,13 +197,6 @@ public class JobGenerator extends Project<JobGenerator, GeneratorRun>
                 if(o.has(k)){ this.autoRunJob = o.getBoolean(k);}
             }
         }
-        
-        if(req.hasParameter("customWorkspace")) {
-            customWorkspace = Util.fixEmptyAndTrim(req.getParameter(
-                                                 "customWorkspace.directory"));
-        } else {
-            customWorkspace = null;
-        }
     }
 
     @Extension
