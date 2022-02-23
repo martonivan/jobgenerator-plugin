@@ -148,7 +148,7 @@ public class JobGenerator extends Project<JobGenerator, GeneratorRun>
 
     @Override
     public Label getAssignedLabel() {
-        return new LabelAtom("master");
+        return new LabelAtom("built-in");
     }
 
     @Override
